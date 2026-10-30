@@ -56,5 +56,6 @@ project/
 │   └── test_api.py
 │
 ├── docker-compose.yml
+├── .env.example
 └── requirements.txt
 ```
