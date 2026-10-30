@@ -47,6 +47,7 @@ class IngestionCache :
         result = self.redis.get(key)
 
         if result is None:
+            logger.debug("Ingestion cache miss: %s", key)
             return None
 
         logger.debug("Ingestion cache hit: %s", key)
