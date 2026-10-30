@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
-
+import os
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
@@ -37,7 +37,11 @@ def location_or_none(metadata: dict) -> str | None:
 EMBEDDING_MODEL = settings.embedding_model
 VECTOR_DIR = str(settings.vector_path)        # absolute path, same folder from any working dir
 COLLECTION = "knowledge"
-REDIS_URL = settings.redis_url
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+GENERATOR_API_KEY = os.getenv("GENERATOR_API_KEY")
+GENERATOR_BASE_URL = os.getenv("GENERATOR_BASE_URL", "https://api.groq.com/openai/v1")
+GENERATOR_MODEL = os.getenv("GENERATOR_MODEL", "llama-3.3-70b-versatile")
+GENERATOR_TIMEOUT = int(os.getenv("GENERATOR_TIMEOUT", "30"))  
 
 def get_embeddings():
     from langchain_openai import OpenAIEmbeddings   # change provider HERE only
