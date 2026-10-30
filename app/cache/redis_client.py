@@ -136,3 +136,8 @@ class RedisClient :
         except redis.RedisError:
             logger.exception("Redis EXISTS failed")
             return False
+        
+        
+# Close Function
+    def close(self) -> None:
+        self.re.close()
