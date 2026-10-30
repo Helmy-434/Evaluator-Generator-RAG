@@ -8,7 +8,7 @@ project/
 │   │   ├── config.py                 # Environment variables and settings
 │   │   ├── logging.py                # Logging configuration
 │   │   └── errors.py                 # Shared error handling
-│   ├── schemas.py                    # Shared Pydantic contracts
+│   ├── contract.py                    # Shared Pydantic contracts
 │   │
 │   ├── api/
 │   │   ├── sources.py                # Source API
