@@ -23,14 +23,14 @@ LOCATION = "location"        # str|None  "page 3" | "slide 5" | "00:01:23" | "li
 # 2. SHARED STORAGE: both sides open the SAME store with the SAME embeddings
 #    (different embedding models silently give garbage retrieval)
 # =============================================================================
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 VECTOR_DIR = os.getenv("VECTOR_DIR", "./data/vectorstore")
 COLLECTION = "knowledge"
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 def get_embeddings():
-    from langchain_openai import OpenAIEmbeddings   # change provider HERE only
-    return OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
 def get_vector_store():
     """Ingestion calls .add_documents()/.delete(); chat calls .as_retriever()/similarity search."""
