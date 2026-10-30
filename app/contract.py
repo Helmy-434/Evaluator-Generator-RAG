@@ -8,6 +8,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 log = logging.getLogger(__name__)
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
+
 # =============================================================================
 # 0. SETTINGS: read from environment variables / .env file (pydantic-settings)
 #    Env var names match the field names, case-insensitive:
@@ -15,7 +17,7 @@ log = logging.getLogger(__name__)
 # =============================================================================
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ROOT_DIR / ".env",
         env_file_encoding="utf-8",
         extra="ignore",            # other keys in .env (API keys, etc.) are not an error
     )
