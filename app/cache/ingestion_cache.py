@@ -55,18 +55,21 @@ class IngestionCache :
 
 
 
-    def set(self, file_content: bytes, value: str) -> None:
+    def set(self, file_content: bytes, value: str) -> bool:
         """Save ingestion result in Redis."""
 
         key = self.generate_key(file_content)
 
-        self.redis.set(
-            name=key,
-            value=value,
-            ex=self.ttl,
+        success = self.redis.set(
+            key,
+            value,
+            ttl=self.ttl,
         )
 
-        logger.info("Ingestion result cached: %s", key)
+        if success:
+            logger.info("Ingestion result cached: %s", key)
+
+        return success
 
 
 
