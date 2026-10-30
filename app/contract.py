@@ -1,32 +1,9 @@
 from __future__ import annotations
 
-import logging
+import os
 from enum import Enum
 
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-log = logging.getLogger(__name__)
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
-
-# =============================================================================
-# 0. SETTINGS: read from environment variables / .env file (pydantic-settings)
-#    Env var names match the field names, case-insensitive:
-#    EMBEDDING_MODEL, VECTOR_DIR, REDIS_URL
-# =============================================================================
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=ROOT_DIR / ".env",
-        env_file_encoding="utf-8",
-        extra="ignore",            # other keys in .env (API keys, etc.) are not an error
-    )
-
-    embedding_model: str = "text-embedding-3-small"
-    vector_dir: str = "./data/vectorstore"
-    redis_url: str = "redis://localhost:6379/0"
-
-settings = Settings()
 
 # =============================================================================
 # 1. CHUNK FORMAT: every chunk is a langchain Document with these metadata keys
@@ -39,23 +16,17 @@ SOURCE_ID = "source_id"      # str  stable id of the whole source (hash of its c
 SOURCE = "source"            # str  filename or URL shown to the user
 TYPE = "type"                # str  a SourceType value
 CHUNK_ID = "chunk_id"        # str  f"{source_id}:{chunk_index}"
-LOCATION = "location"        # str  "page 3" | "slide 5" | "00:01:23" | "lines 10-42"
-                             #      NEVER None: Chroma rejects None metadata values.
-                             #      Use "" when a chunk has no location.
+LOCATION = "location"        # str|None  "page 3" | "slide 5" | "00:01:23" | "lines 10-42"
 # page_content = the chunk text. Nothing else is guaranteed.
-
-def location_or_none(metadata: dict) -> str | None:
-    """Read LOCATION from chunk metadata; "" (or missing) -> None for API models."""
-    return metadata.get(LOCATION) or None
 
 # =============================================================================
 # 2. SHARED STORAGE: both sides open the SAME store with the SAME embeddings
 #    (different embedding models silently give garbage retrieval)
 # =============================================================================
-EMBEDDING_MODEL = settings.embedding_model
-VECTOR_DIR = settings.vector_dir
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+VECTOR_DIR = os.getenv("VECTOR_DIR", "./data/vectorstore")
 COLLECTION = "knowledge"
-REDIS_URL = settings.redis_url
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 def get_embeddings():
     from langchain_openai import OpenAIEmbeddings   # change provider HERE only
@@ -71,19 +42,11 @@ def get_vector_store():
 # 3. CORPUS VERSION: how chat knows its cached answers are stale
 #    Ingestion calls bump_corpus_version() after EVERY add or delete.
 #    Chat includes get_corpus_version() in every answer-cache key.
-#
-#    bump_corpus_version returns None when Redis is unavailable (the safe client
-#    returns None from incr). Ingestion must then set IngestResult.cache_synced
-#    = False so the failure is visible instead of silently serving stale answers.
 # =============================================================================
 CORPUS_VERSION_KEY = "corpus:version"
 
-def bump_corpus_version(redis_client) -> str | None:
-    value = redis_client.incr(CORPUS_VERSION_KEY)
-    if value is None:
-        log.warning("corpus version NOT bumped (redis unavailable): cached answers may be stale")
-        return None
-    return str(value)
+def bump_corpus_version(redis_client) -> str:
+    return str(redis_client.incr(CORPUS_VERSION_KEY))
 
 def get_corpus_version(redis_client) -> str:
     return redis_client.get(CORPUS_VERSION_KEY) or "0"   # chat must treat Redis errors as "0"/no cache
@@ -117,12 +80,10 @@ class IngestWikipediaRequest(BaseModel):
 class IngestResult(BaseModel):
     source_id: str
     source: str
-    type: SourceType | None = None  # None when a failed upload has no recognizable type
+    type: SourceType
     status: str                    # "ingested" | "already_exists" | "failed"
     chunks_added: int = 0
     message: str | None = None     # reason when failed / skipped
-    cache_synced: bool = True      # False => ingestion succeeded but bump_corpus_version failed
-                                   #          (redis down), so cached answers may be stale
 
 class SourceInfo(BaseModel):
     source_id: str
