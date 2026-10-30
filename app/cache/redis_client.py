@@ -141,3 +141,8 @@ class RedisClient :
 # Close Function
     def close(self) -> None:
         self.re.close()
+        
+        
+        
+# create one shared redis object instead of new client every time
+redis_client = RedisClient()
