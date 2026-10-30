@@ -1,4 +1,4 @@
-from .redis_client import RedisClient
+from .redis_client import redis_client
 import logging
 import hashlib
 
@@ -11,7 +11,7 @@ class IngestionCache :
     
     def __init__(self , ttl : int = 86400) : # 86400 = 1 day expiration
         
-        self.redis = RedisClient()
+        self.redis = redis_client
         self.ttl = ttl
         
         
