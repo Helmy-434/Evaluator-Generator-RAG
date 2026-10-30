@@ -19,5 +19,9 @@ class Retriever:
             if score >= self.score_threshold
         ]
         
-        return relevant_docs
+        return {
+            "documents": relevant_docs,
+            "has_relevant": len(relevant_docs) > 0,
+            "count": len(relevant_docs)
+        }
 
