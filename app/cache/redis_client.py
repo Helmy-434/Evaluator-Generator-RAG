@@ -110,7 +110,7 @@ class RedisClient :
     
     
 
-# helper method to check health of Cache
+# helper methods to check health of Cache & exists of key
 
     def ping(self) -> bool:
        try:
@@ -118,3 +118,13 @@ class RedisClient :
        
        except redis.RedisError:
            return False
+       
+       
+    def exists(self, key: str) -> bool:
+
+        try:
+            return bool(self.re.exists(key))
+
+        except redis.RedisError:
+            logger.exception("Redis EXISTS failed")
+            return False
