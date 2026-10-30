@@ -1,6 +1,6 @@
+**Project Structure**
 
-** Project Structure **
-
+```text
 project/
 ├── app/
 │   ├── main.py                       # Application entry point
@@ -11,10 +11,10 @@ project/
 │   ├── schemas.py                    # Shared Pydantic contracts
 │   │
 │   ├── api/
-│   │   ├── sources.py                #  source API
-│   │   └── chat.py                   #  AI chat API
+│   │   ├── sources.py                # Source API
+│   │   └── chat.py                   # AI chat API
 │   │
-│   ├── ingestion/                    #  knowledge ingestion
+│   ├── ingestion/                    # Knowledge ingestion
 │   │   ├── validators.py             # File and URL validation
 │   │   ├── file_loaders.py           # PDF, DOCX, TXT, code, PPT/PPTX
 │   │   ├── web_loaders.py            # Web pages and Wikipedia
@@ -24,18 +24,18 @@ project/
 │   │   └── pipeline.py               # Load -> clean -> chunk -> index
 │   │
 │   ├── knowledge/
-│   │   ├── vector_store.py           #  vector storage and indexing
-│   │   └── retriever.py              #  retrieve relevant evidence
+│   │   ├── vector_store.py           # Vector storage and indexing
+│   │   └── retriever.py              # Retrieve relevant evidence
 │   │
 │   ├── cache/
-│   │   ├── redis_client.py           #  shared Redis wrapper
-│   │   ├── ingestion_cache.py        #  document/embedding cache
-│   │   └── answer_cache.py           #  answer and evaluation cache
+│   │   ├── redis_client.py           # Shared Redis wrapper
+│   │   ├── ingestion_cache.py        # Document/embedding cache
+│   │   └── answer_cache.py           # Answer and evaluation cache
 │   │
 │   ├── agents/
-│   │   ├── generator.py              #  Generator LLM
-│   │   ├── evaluator.py              #  Evaluator LLM
-│   │   └── prompts.py                #  agent prompts
+│   │   ├── generator.py              # Generator LLM
+│   │   ├── evaluator.py              # Evaluator LLM
+│   │   └── prompts.py                # Agent prompts
 │   │
 │   ├── memory/
 │   │   ├── generator_memory.py       # Generator memory
@@ -56,6 +56,5 @@ project/
 │   └── test_api.py
 │
 ├── docker-compose.yml
-├── .env.example
-├── requirements.txt
-└── README.md
+└── requirements.txt
+```
