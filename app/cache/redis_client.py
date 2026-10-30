@@ -2,7 +2,7 @@ import redis
 from app.contract import REDIS_URL
 import json
 import logging
-from typing import final
+from typing import final , Any
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class RedisClient :
 
 # REDIS CRUD Operations : GET , DELETE , SET
 
-    def get(self , key : str):
+    def get(self , key : str)-> str | None:
         
         try : 
             
@@ -87,7 +87,7 @@ class RedisClient :
 
 ## 2 Helper Methods to get & set structured json from redis "string" Value .
 
-    def get_json(self , key : str):
+    def get_json(self , key : str) -> Any | None:
         
         data = self.get(key)
         
@@ -99,13 +99,20 @@ class RedisClient :
             return json.loads(data) 
         
         except json.JSONDecodeError :
+            logger.warning("Invalid JSON stored for key: %s", key)
             return None
         
         
     
     def set_json(self , key : str , value : str, ttl : int | None = None)-> bool : 
         
-        return self.set(key, json.dumps(value), ttl)
+        try:
+            serialized = json.dumps(value)
+            return self.set(key, serialized, ttl)
+
+        except (TypeError, ValueError):
+            logger.exception("JSON serialization failed for key: %s", key)
+            return False
     
     
     
@@ -117,6 +124,7 @@ class RedisClient :
            return bool(self.re.ping()) 
        
        except redis.RedisError:
+           logger.exception("Redis health check failed")
            return False
        
        
