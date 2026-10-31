@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import logging
 from enum import Enum
 
@@ -45,6 +47,7 @@ def get_embeddings():
         return OpenAIEmbeddings(model=EMBEDDING_MODEL, api_key=settings.openai_api_key)
     return OpenAIEmbeddings(model=EMBEDDING_MODEL)
 
+@lru_cache(maxsize=1)
 def get_vector_store():
     """Ingestion calls .add_documents()/.delete(); chat calls .as_retriever()/similarity search."""
     from langchain_chroma import Chroma
