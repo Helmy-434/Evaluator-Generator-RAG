@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # --- Ingestion -------------------------------------------------------------
     max_upload_mb: int = 25
+    max_audio_mb: int = 50
     chunk_size: int = 1000
     chunk_overlap: int = 150
     whisper_model: str = "small"
@@ -58,5 +59,8 @@ class Settings(BaseSettings):
     def max_upload_bytes(self) -> int:
         return self.max_upload_mb * 1024 * 1024
 
+    @property
+    def max_audio_bytes(self) -> int:
+        return self.max_audio_mb * 1024 * 1024
 
 settings = Settings()
