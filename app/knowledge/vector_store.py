@@ -115,3 +115,49 @@ def replace_source(source_id: str, chunks: list[Document]) -> tuple[int, str | N
         return 0, bump_corpus_version(redis_client)
     
     return add_chunks(chunks)
+
+
+
+# Read ops by ingestion side
+def source_exists(source_id: str) -> bool:
+    store = get_vector_store()
+    result = store.get(where={SOURCE_ID: source_id}, limit=1, include=["metadatas"])
+    return bool(result.get("ids"))
+
+
+def list_sources() -> list[SourceInfo]:
+    """One entry per source, with its chunk count, built from the chunk metadata."""
+    
+    store = get_vector_store()
+    result = store.get(include=["metadatas"])
+    metadatas = result.get("metadatas") or []
+
+    grouped = OrderedDict()
+    
+    for meta in metadatas:
+        if not meta:
+            continue
+        sid = meta.get(SOURCE_ID)
+        
+        if not sid:
+            continue
+        
+        entry = grouped.setdefault(
+            sid, {"source": meta.get(SOURCE, ""), "type": meta.get(TYPE, ""), "count": 0}
+        )
+        
+        entry["count"] += 1
+
+    sources: list[SourceInfo] = []
+    
+    for sid, entry in grouped.items():
+        try:
+            stype = SourceType(entry["type"])
+        except ValueError:
+            log.warning("skipping source %s with unknown type %r", sid, entry["type"])
+            continue
+        sources.append(
+            SourceInfo(source_id=sid, source=entry["source"], type=stype, chunk_count=entry["count"])
+        )
+    
+    return sorted(sources, key=lambda s: s.source.lower())
