@@ -5,6 +5,7 @@ import {
 } from "./config.js";
 import { api } from "./api.js";
 import { renderMarkdown } from "./markdown.js";
+import { VoiceRecorder, recordingSupport, micErrorMessage, MAX_RECORDING_SECONDS } from "./recorder.js";
 
 // ----------------------------------------------------------------------------
 // Helpers
@@ -592,11 +593,124 @@ function initChat() {
 }
 
 // ----------------------------------------------------------------------------
+// Voice recording: record -> preview -> add to the knowledge base as a WAV source
+// ----------------------------------------------------------------------------
+function initRecorder() {
+  const ui = {
+    idle: $("#rec-idle"), active: $("#rec-active"), review: $("#rec-review"),
+    start: $("#btn-rec-start"), stop: $("#btn-rec-stop"), cancel: $("#btn-rec-cancel"),
+    add: $("#btn-rec-add"), discard: $("#btn-rec-discard"),
+    timer: $("#rec-timer"), level: $("#rec-level"), audio: $("#rec-audio"), name: $("#rec-name"),
+  };
+
+  const support = recordingSupport();
+  if (!support.ok) {
+    ui.start.disabled = true;
+    showFieldError("#rec-error", support.reason);
+    return;
+  }
+
+  let recorder = null;
+  let recording = null;                                  // { blob, url } waiting in the review step
+
+  const show = (which) => {
+    ui.idle.hidden = which !== "idle";
+    ui.active.hidden = which !== "active";
+    ui.review.hidden = which !== "review";
+  };
+  const clock = (seconds) =>
+    `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+  const defaultName = () => {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, "0");
+    return `recording-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+  };
+  const cleanName = (raw) =>
+    raw.trim().replace(/\.wav$/i, "").replace(/[^\w \-().]+/g, "-").slice(0, 80).trim();
+  const discardRecording = () => {
+    if (recording) URL.revokeObjectURL(recording.url);
+    recording = null;
+    ui.audio.removeAttribute("src");
+    ui.audio.load();
+  };
+
+  async function finish() {
+    if (!recorder) return;
+    const active = recorder;
+    recorder = null;
+    ui.stop.disabled = true;
+    try {
+      const result = await active.stop();
+      ui.level.style.width = "0%";
+      if (result.duration < 1) {
+        showFieldError("#rec-error", "The recording was too short. Hold on for at least a second.");
+        show("idle");
+        return;
+      }
+      discardRecording();
+      recording = { blob: result.blob, url: URL.createObjectURL(result.blob) };
+      ui.audio.src = recording.url;
+      ui.name.value = defaultName();
+      showFieldError("#rec-warning",
+        result.peak < 0.02 ? "Very little sound was detected. Check your microphone before adding this." : "");
+      show("review");
+    } catch {
+      showFieldError("#rec-error", "Could not process the recording. Please try again.");
+      show("idle");
+    } finally {
+      ui.stop.disabled = false;
+    }
+  }
+
+  ui.start.addEventListener("click", async () => {
+    showFieldError("#rec-error", "");
+    discardRecording();
+    ui.start.disabled = true;                             // the permission prompt can take a while
+    const candidate = new VoiceRecorder({
+      onTick: (s) => { ui.timer.textContent = `${clock(s)} / ${clock(MAX_RECORDING_SECONDS)}`; },
+      onLevel: (v) => { ui.level.style.width = `${Math.round(v * 100)}%`; },
+      onLimit: () => { toast(`Reached the ${clock(MAX_RECORDING_SECONDS)} limit: recording stopped`, "info"); finish(); },
+    });
+    try {
+      await candidate.start();
+      recorder = candidate;
+      ui.timer.textContent = `00:00 / ${clock(MAX_RECORDING_SECONDS)}`;
+      show("active");
+    } catch (err) {
+      showFieldError("#rec-error", micErrorMessage(err));
+    } finally {
+      ui.start.disabled = false;
+    }
+  });
+
+  ui.stop.addEventListener("click", finish);
+
+  ui.cancel.addEventListener("click", () => {
+    recorder?.cancel();
+    recorder = null;
+    ui.level.style.width = "0%";
+    show("idle");
+  });
+
+  ui.add.addEventListener("click", () => {
+    if (!recording) return;
+    const base = cleanName(ui.name.value) || defaultName();
+    const file = new File([recording.blob], `${base}.wav`, { type: "audio/wav" });
+    discardRecording();
+    show("idle");
+    addFiles([file]);                                     // same queue, limits and feedback as uploads
+  });
+
+  ui.discard.addEventListener("click", () => { discardRecording(); showFieldError("#rec-warning", ""); show("idle"); });
+}
+
+// ----------------------------------------------------------------------------
 // Boot
 // ----------------------------------------------------------------------------
 function init() {
   initChrome();
   initUpload();
+  initRecorder();
   initForms();
   initChat();
   loadSession();

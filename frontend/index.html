@@ -53,6 +53,39 @@
       <button id="btn-clear-finished" class="btn ghost small" hidden>Clear finished</button>
     </section>
 
+    <section class="card" id="recorder-card">
+      <h3>Record audio</h3>
+      <div id="rec-idle">
+        <button id="btn-rec-start" class="btn rec-btn" type="button"><span class="rec-dot" aria-hidden="true"></span> Start recording</button>
+        <small class="muted" id="rec-hint">Your recording is saved as WAV and transcribed to text.</small>
+      </div>
+      <div id="rec-active" hidden>
+        <div class="rec-live" role="status" aria-live="off">
+          <span class="rec-dot live" aria-hidden="true"></span>
+          <span id="rec-timer" class="rec-timer">00:00</span>
+          <div class="meter" aria-hidden="true"><div id="rec-level" class="meter-bar"></div></div>
+        </div>
+        <div class="rec-actions">
+          <button id="btn-rec-stop" class="btn primary small" type="button">Stop</button>
+          <button id="btn-rec-cancel" class="btn ghost small" type="button">Cancel</button>
+        </div>
+      </div>
+      <div id="rec-review" hidden>
+        <audio id="rec-audio" controls preload="metadata"></audio>
+        <div class="rec-name-row">
+          <label class="sr-only" for="rec-name">Recording name</label>
+          <input id="rec-name" type="text" maxlength="80" autocomplete="off">
+          <span class="muted">.wav</span>
+        </div>
+        <p id="rec-warning" class="field-error" hidden></p>
+        <div class="rec-actions">
+          <button id="btn-rec-add" class="btn primary small" type="button">Add to knowledge base</button>
+          <button id="btn-rec-discard" class="btn ghost small" type="button">Discard</button>
+        </div>
+      </div>
+      <p id="rec-error" class="field-error" hidden></p>
+    </section>
+
     <section class="card">
       <h3>Web page</h3>
       <form id="url-form" class="inline-form" novalidate>
