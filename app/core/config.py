@@ -17,9 +17,8 @@ class Settings(BaseSettings):
         extra="ignore",               # unknown keys in .env are not an error
     )
 
-    # --- Embeddings / LLM provider ---------------------------------------------
-    embedding_model: str = "text-embedding-3-small"
-    openai_api_key: str | None = None  # optional here; can also come from the OS environment
+    # --- Local embeddings ------------------------------------------------------
+    embedding_model: str = "all-MiniLM-L6-v2"
 
     # --- Storage ---------------------------------------------------------------
     vector_dir: str = "./data/vectorstore"      # relative paths are anchored to ROOT_DIR

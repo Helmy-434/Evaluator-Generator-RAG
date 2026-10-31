@@ -57,10 +57,12 @@ EVALUATOR_MODEL = os.getenv("EVALUATOR_MODEL", "gemini-3.5-flash-lite")
 EVALUATOR_TIMEOUT = int(os.getenv("EVALUATOR_TIMEOUT", "30"))
 
 def get_embeddings():
-    from langchain_openai import OpenAIEmbeddings   # change provider HERE only
-    if settings.openai_api_key:                      # key from .env; otherwise OPENAI_API_KEY in the OS env
-        return OpenAIEmbeddings(model=EMBEDDING_MODEL, api_key=settings.openai_api_key)
-    return OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    from langchain_huggingface import HuggingFaceEmbeddings
+
+    return HuggingFaceEmbeddings(
+        model_name=EMBEDDING_MODEL,
+        encode_kwargs={"normalize_embeddings": True},
+    )
 
 @lru_cache(maxsize=1)
 def get_vector_store():
@@ -70,6 +72,7 @@ def get_vector_store():
         collection_name=COLLECTION,
         embedding_function=get_embeddings(),
         persist_directory=VECTOR_DIR,
+        collection_metadata={"hnsw:space": "cosine"},
     )
 
 # =============================================================================

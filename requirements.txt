@@ -13,6 +13,8 @@ langchain-core
 langchain-community
 langchain-text-splitters
 langchain-openai
+langchain-huggingface
+sentence-transformers
 langchain-chroma
 
 # LLM

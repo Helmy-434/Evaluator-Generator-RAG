@@ -787,12 +787,11 @@ APP_VERSION=1.0.0
 DEBUG=true
 
 # LLM
-OPENAI_API_KEY=
 LLM_MODEL=
 TEMPERATURE=0
 
 # Embeddings
-EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_MODEL=all-MiniLM-L6-v2
 
 # Vector Database
 VECTOR_PATH=./data/chroma
@@ -1155,4 +1154,3 @@ Responsible for:
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-
