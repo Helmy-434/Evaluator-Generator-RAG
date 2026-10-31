@@ -4,6 +4,7 @@ from langchain_core.documents import Document
 from app.agents.evaluator import EvaluationResult, EvaluationError
 from app.agents.generator import GenerationError
 from app.agents.prompts import REFUSAL_SENTENCE
+from app.memory.hooks import build_memory_hook
 from app.workflow.evaluator_generator import run_loop
 
 DOCS = [Document(page_content="t", metadata={"source": "a.txt", "type": "txt", "location": ""})]
@@ -73,3 +74,34 @@ def test_generator_failure_after_first_pass_returns_previous():
     g = FakeGen(["d1", GenerationError("x"), GenerationError("x")])
     r = run_loop("q", DOCS, g, FakeEval([verdict(False, "f")]))
     assert not r.validated and r.answer.startswith("d1")
+
+
+def test_session_memory_is_written_by_workflow(monkeypatch):
+    generation_events = []
+    evaluation_events = []
+    monkeypatch.setattr(
+        "app.memory.hooks.generator_memory.record_draft",
+        lambda session_id, iteration, draft, request_id=None: generation_events.append(
+            (session_id, iteration, draft)
+        ),
+    )
+    monkeypatch.setattr(
+        "app.memory.hooks.evaluator_memory.record_evaluation",
+        lambda session_id, iteration, result, request_id=None: evaluation_events.append(
+            (session_id, iteration, result)
+        ),
+    )
+
+    result = run_loop(
+        "q",
+        DOCS,
+        FakeGen(["A [Passage 1]"]),
+        FakeEval([verdict(True)]),
+        on_event=build_memory_hook("session-a", "request-a"),
+    )
+
+    assert result.validated
+    assert generation_events[0][0:2] == ("session-a", 1)
+    assert generation_events[0][2]["draft_answer"] == "A [Passage 1]"
+    assert evaluation_events[0][0:2] == ("session-a", 1)
+    assert evaluation_events[0][2].is_valid is True
