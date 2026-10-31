@@ -18,7 +18,7 @@ class FakeGen:
         if isinstance(a, Exception):
             raise a
         return {"draft_answer": a, "insufficient_knowledge": a == REFUSAL_SENTENCE, "sources": []}
-    def _build_sources(self, idx, docs): return [docs[i - 1] for i in idx]
+    def build_sources(self, idx, docs): return [docs[i - 1] for i in idx]
 
 
 class FakeEval:
