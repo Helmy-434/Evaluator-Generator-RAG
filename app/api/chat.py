@@ -14,7 +14,7 @@ from app.cache.answer_cache import (
     current_corpus_version,
     get_cached_answer,
 )
-from app.contract import ChatRequest, ChatResponse
+from app.core.contract import ChatRequest, ChatResponse
 from app.core.errors import ChatUnavailable, InvalidRequest, NoKnowledgeLoaded
 from app.knowledge.retriever import (
     EmptyKnowledgeBaseError,

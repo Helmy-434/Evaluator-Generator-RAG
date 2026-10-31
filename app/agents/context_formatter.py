@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from langchain_core.documents import Document
-from app.contract import SOURCE, LOCATION
+from app.core.contract import SOURCE, LOCATION
 
 TAG_SANITIZE_RE = re.compile(
     r"<\s*/?\s*(context|draft_answer|previous_draft|evaluator_feedback)\b[^>]*>",

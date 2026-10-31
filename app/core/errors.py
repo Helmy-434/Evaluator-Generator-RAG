@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.contract import ErrorResponse
+from app.core.contract import ErrorResponse
 
 log = logging.getLogger(__name__)
 

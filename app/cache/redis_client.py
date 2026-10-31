@@ -1,5 +1,5 @@
 import redis
-from app.contract import REDIS_URL
+from app.core.contract import REDIS_URL
 import json
 import logging
 from typing import final , Any

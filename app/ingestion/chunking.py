@@ -1,7 +1,7 @@
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from app.contract import CHUNK_ID, SOURCE_ID
+from app.core.contract import CHUNK_ID, SOURCE_ID
 from app.core.config import settings
 
 

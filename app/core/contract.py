@@ -142,7 +142,7 @@ class ChatResponse(BaseModel):
     validated: bool
     iterations_used: int
     insufficient_knowledge: bool = False
-    sources: list[SourceRef] = []
+    sources: list[SourceRef] = Field(default_factory=list)
     evaluator_feedback: str | None = None
     cache_hit: bool = False
 

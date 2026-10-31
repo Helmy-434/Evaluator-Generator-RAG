@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.citations import is_refusal_answer, cited_indices
 from app.agents.context_formatter import format_context, escape_xml_delimiters
-from app.contract import (
+from app.core.contract import (
     GENERATOR_API_KEY,
     GENERATOR_BASE_URL,
     GENERATOR_MODEL,
@@ -78,8 +78,10 @@ class Generator:
             meta = doc.metadata or {}
             try:
                 src_type = SourceType(meta.get(TYPE)) if meta.get(TYPE) else SourceType.TXT
-            except ValueError:
-                src_type = SourceType.TXT
+            except ValueError as exc:
+                raise GenerationError(
+                    f"Unsupported source type in citation metadata: {meta.get(TYPE)!r}"
+                ) from exc
             sources.append(
                 SourceRef(
                     source=meta.get(SOURCE, "unknown"),
@@ -89,8 +91,6 @@ class Generator:
                 )
             )
         return sources
-
-    _build_sources = build_sources
 
     def generate(
         self,

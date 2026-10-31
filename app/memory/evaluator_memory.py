@@ -4,7 +4,7 @@ import logging
 from typing import Any
 
 from app.cache.redis_client import redis_client
-from app.contract import NS_EVAL_MEMORY
+from app.core.contract import NS_EVAL_MEMORY
 
 logger = logging.getLogger(__name__)
 

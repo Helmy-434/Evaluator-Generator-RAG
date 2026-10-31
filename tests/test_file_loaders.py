@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from langchain_core.documents import Document
 
-from app.contract import (
+from app.core.contract import (
     SourceType,
     SOURCE,
     TYPE,

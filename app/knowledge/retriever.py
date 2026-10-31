@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from pydantic import Field
 
-from app.contract import (
+from app.core.contract import (
     CHUNK_ID,
     LOCATION,
     SOURCE_ID,

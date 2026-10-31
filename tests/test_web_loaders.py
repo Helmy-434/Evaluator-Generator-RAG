@@ -3,7 +3,7 @@ import pytest
 
 from langchain_core.documents import Document
 
-from app.contract import SOURCE, TYPE, LOCATION, SourceType
+from app.core.contract import SOURCE, TYPE, LOCATION, SourceType
 from app.core.errors import InvalidRequest
 from app.ingestion import web_loaders
 

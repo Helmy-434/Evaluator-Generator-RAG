@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 from app.cache.redis_client import redis_client
-from app.contract import (
+from app.core.contract import (
     EVALUATOR_MODEL,
     GENERATOR_MODEL,
     NS_ANSWER,

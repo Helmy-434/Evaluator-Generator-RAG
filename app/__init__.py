@@ -1,2 +1,2 @@
 from .cache import *
-from .contract import *
+from .core.contract import *

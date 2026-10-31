@@ -77,6 +77,10 @@ def run_loop(
     max_iterations: int = MAX_ITERATIONS,
     on_event: EventHook | None = None,
 ) -> LoopResult:
+    if max_iterations < 1:
+        raise ValueError("max_iterations must be at least 1")
+    max_iterations = min(max_iterations, MAX_ITERATIONS)
+
     # Retrieval found nothing relevant: refuse without any LLM call.
     if not documents:
         return LoopResult(REFUSAL_SENTENCE, True, 0, True, [], None,
@@ -107,6 +111,8 @@ def run_loop(
                                insufficient_knowledge=draft["insufficient_knowledge"])
         except EvaluationError as exc:
             logger.error("Evaluator unavailable at iteration %d: %s", i, exc)
+            if draft is None:
+                raise RuntimeError("Workflow ended without a generated draft")
             text, sources = _finalize(draft, documents, generator)
             return LoopResult(text, False, i, draft["insufficient_knowledge"], sources,
                               None, note="Evaluator unavailable; answer not validated.")

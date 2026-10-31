@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.contract import SourceType
+from app.core.contract import SourceType
 from app.ingestion import validators
 from app.workflow.evaluator_generator import run_loop
 from app.agents.evaluator import EvaluationOutputError, EvaluationError

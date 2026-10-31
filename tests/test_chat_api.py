@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.api import chat
-from app.contract import ChatRequest, ChatResponse
+from app.core.contract import ChatRequest, ChatResponse
 from app.core.errors import NoKnowledgeLoaded
 from app.knowledge.retriever import ScoredChunk
 

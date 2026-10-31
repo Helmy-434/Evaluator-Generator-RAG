@@ -2,7 +2,7 @@ from langchain_community.document_loaders import WebBaseLoader ,WikipediaLoader
 
 from langchain_core.documents import Document
 
-from app.contract import (
+from app.core.contract import (
     SOURCE,
     TYPE,
     LOCATION,

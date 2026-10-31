@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.contract import SourceType
+from app.core.contract import SourceType
 from app.core.config import settings
 from app.core.errors import InvalidRequest, FileTooLarge
 

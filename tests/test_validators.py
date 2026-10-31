@@ -3,7 +3,7 @@ import socket
 
 import pytest
 
-from app.contract import SourceType
+from app.core.contract import SourceType
 from app.core.config import settings
 from app.core.errors import FileTooLarge, InvalidRequest
 from app.ingestion.validators import validate_file, validate_url

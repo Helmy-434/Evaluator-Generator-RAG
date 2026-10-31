@@ -6,7 +6,7 @@ from app.agents.prompts import REFUSAL_SENTENCE
 from app.agents.evaluator import (Evaluator, LLMEvaluationOutput,
                                   EvaluationError, EvaluationOutputError)
 from app.agents.generator import Generator
-from app.contract import SOURCE, TYPE, LOCATION
+from app.core.contract import SOURCE, TYPE, LOCATION
 
 
 class FakeStructuredLLM:
