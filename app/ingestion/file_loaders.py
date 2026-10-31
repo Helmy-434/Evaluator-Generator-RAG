@@ -12,7 +12,7 @@ from langchain_community.document_loaders import (
     TextLoader,
 )
 
-from app.contract import SourceType, SOURCE, TYPE, LOCATION
+from app.core.contract import SourceType, SOURCE, TYPE, LOCATION
 from app.core.errors import IngestionFailed
 
 

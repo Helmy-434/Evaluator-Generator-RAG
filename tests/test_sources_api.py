@@ -25,7 +25,7 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.api import sources  # noqa: E402
-from app.contract import IngestResult, SourceInfo, SourceType  # noqa: E402
+from app.core.contract import IngestResult, SourceInfo, SourceType  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.errors import UnsupportedFileType  # noqa: E402
 from app.main import app  # noqa: E402

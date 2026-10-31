@@ -4,7 +4,7 @@ import hashlib
 import pytest
 from langchain_core.documents import Document
 
-from app.contract import SOURCE, SOURCE_ID, CHUNK_ID, SourceType
+from app.core.contract import SOURCE, SOURCE_ID, CHUNK_ID, SourceType
 from app.core.errors import InvalidRequest
 from app.ingestion import pipeline
 
@@ -34,11 +34,19 @@ def mock_vector_store(monkeypatch):
 
     store = MockVectorStore()
 
+    def add_chunks(chunks):
+        store.add_documents(
+            chunks,
+            [chunk.metadata[CHUNK_ID] for chunk in chunks],
+        )
+        return len(chunks), pipeline.bump_corpus_version(pipeline.redis_client)
+
     monkeypatch.setattr(
         pipeline,
         "get_vector_store",
         lambda: store,
     )
+    monkeypatch.setattr(pipeline, "add_chunks", add_chunks)
 
     return store
 
@@ -111,7 +119,7 @@ def test_ingest_file_success(
     monkeypatch.setattr(
         pipeline,
         "load_file",
-        lambda filename, data: sample_documents,
+        lambda filename, data, source_type: sample_documents,
     )
 
     monkeypatch.setattr(

@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, File, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
-from app.contract import (
+from app.core.contract import (
     IngestResult,
     IngestUrlRequest,
     IngestWikipediaRequest,

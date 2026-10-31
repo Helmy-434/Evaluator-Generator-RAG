@@ -40,27 +40,31 @@ def location_or_none(metadata: dict) -> str | None:
 #    (different embedding models silently give garbage retrieval)
 #    Values come from app/core/config.py (env vars / .env).
 # =============================================================================
+import re
+
 EMBEDDING_MODEL = settings.embedding_model
-VECTOR_DIR = str(settings.vector_path)        # absolute path, same folder from any working dir
-COLLECTION = "knowledge"
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+VECTOR_DIR = str(settings.vector_path)
+# Embedding model and metric are baked into the collection name, so changing either
+# starts a fresh collection instead of failing on dimension mismatches.
+COLLECTION = "knowledge_" + re.sub(r"[^A-Za-z0-9_-]", "_", EMBEDDING_MODEL) + "_cosine"
+REDIS_URL = settings.redis_url
 
-# Generator settings (Groq Llama 3.3 70B)
-GENERATOR_API_KEY = os.getenv("GENERATOR_API_KEY")
-GENERATOR_BASE_URL = os.getenv("GENERATOR_BASE_URL", "https://api.groq.com/openai/v1")
-GENERATOR_MODEL = os.getenv("GENERATOR_MODEL", "llama-3.3-70b-versatile")
-GENERATOR_TIMEOUT = int(os.getenv("GENERATOR_TIMEOUT", "30"))  
+GENERATOR_API_KEY = settings.generator_api_key
+GENERATOR_BASE_URL = settings.generator_base_url
+GENERATOR_MODEL = settings.generator_model
+GENERATOR_TIMEOUT = settings.generator_timeout
 
-# Evaluator settings (Google Gemini - e.g. gemini-2.5-flash / gemini-1.5-pro)
-EVALUATOR_API_KEY = os.getenv("EVALUATOR_API_KEY") or os.getenv("GEMINI_API_KEY")
-EVALUATOR_MODEL = os.getenv("EVALUATOR_MODEL", "gemini-3.5-flash-lite")
-EVALUATOR_TIMEOUT = int(os.getenv("EVALUATOR_TIMEOUT", "30"))
+EVALUATOR_API_KEY = settings.evaluator_api_key
+EVALUATOR_MODEL = settings.evaluator_model
+EVALUATOR_TIMEOUT = settings.evaluator_timeout
 
 def get_embeddings():
-    from langchain_openai import OpenAIEmbeddings   # change provider HERE only
-    if settings.openai_api_key:                      # key from .env; otherwise OPENAI_API_KEY in the OS env
-        return OpenAIEmbeddings(model=EMBEDDING_MODEL, api_key=settings.openai_api_key)
-    return OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    from langchain_huggingface import HuggingFaceEmbeddings
+
+    return HuggingFaceEmbeddings(
+        model_name=EMBEDDING_MODEL,
+        encode_kwargs={"normalize_embeddings": True},
+    )
 
 @lru_cache(maxsize=1)
 def get_vector_store():
@@ -70,6 +74,7 @@ def get_vector_store():
         collection_name=COLLECTION,
         embedding_function=get_embeddings(),
         persist_directory=VECTOR_DIR,
+        collection_metadata={"hnsw:space": "cosine"},
     )
 
 # =============================================================================
@@ -137,7 +142,7 @@ class ChatResponse(BaseModel):
     validated: bool
     iterations_used: int
     insufficient_knowledge: bool = False
-    sources: list[SourceRef] = []
+    sources: list[SourceRef] = Field(default_factory=list)
     evaluator_feedback: str | None = None
     cache_hit: bool = False
 

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 
-from app.contract import EVALUATOR_API_KEY, EVALUATOR_MODEL, EVALUATOR_TIMEOUT
+from app.core.contract import EVALUATOR_API_KEY, EVALUATOR_MODEL, EVALUATOR_TIMEOUT
 from app.agents.prompts import EVALUATOR_SYSTEM_PROMPT
 from app.agents.context_formatter import format_context, escape_xml_delimiters
 
@@ -99,6 +99,12 @@ class Evaluator:
 
         if out is None:
             raise EvaluationOutputError("Evaluator returned null structured output.")
+        try:
+            out = LLMEvaluationOutput.model_validate(out)
+        except ValidationError as exc:
+            raise EvaluationOutputError(
+                f"Evaluator returned invalid structured output: {exc}"
+            ) from exc
 
         g = self._check_score(out.groundedness_score, "groundedness_score")
         r = self._check_score(out.relevance_score, "relevance_score")

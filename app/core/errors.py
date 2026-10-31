@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.contract import ErrorResponse
+from app.core.contract import ErrorResponse
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ class ErrorCode(str, Enum):
     TRANSCRIPTION_FAILED = "transcription_failed"
     INGESTION_FAILED = "ingestion_failed"
     NO_KNOWLEDGE_LOADED = "no_knowledge_loaded"
+    CHAT_UNAVAILABLE = "chat_unavailable"
     INTERNAL_ERROR = "internal_error"
 
 
@@ -89,6 +90,11 @@ class IngestionFailed(AppError):
 class NoKnowledgeLoaded(AppError):
     code = ErrorCode.NO_KNOWLEDGE_LOADED
     status_code = 409
+
+
+class ChatUnavailable(AppError):
+    code = ErrorCode.CHAT_UNAVAILABLE
+    status_code = 502
 
 
 # --- FastAPI wiring -------------------------------------------------------------------------

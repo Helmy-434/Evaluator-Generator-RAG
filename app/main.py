@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import sources
+from app.api import chat, sources
 from app.cache.redis_client import redis_client
 from app.core.config import settings
 from app.core.errors import register_error_handlers
@@ -29,6 +29,7 @@ register_error_handlers(app)
 
 # routers
 app.include_router(sources.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
 
 
 

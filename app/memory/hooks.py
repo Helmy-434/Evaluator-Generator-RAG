@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.memory import evaluator_memory, generator_memory
-from app.workflow.evaluator_generator import EventHook
+
+if TYPE_CHECKING:
+    from app.workflow.evaluator_generator import EventHook
 
 
 def build_memory_hook(session_id: str, request_id: str | None = None) -> EventHook:

@@ -3,7 +3,7 @@ import pytest
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
-import app.contract as contract
+import app.core.contract as contract
 from app.knowledge import vector_store as vs
 
 

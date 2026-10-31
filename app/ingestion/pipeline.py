@@ -1,9 +1,10 @@
 import hashlib
 import logging
+from functools import lru_cache
 
 from langchain_core.documents import Document
 
-from app.contract import (
+from app.core.contract import (
     IngestResult,
     SourceType,
     SOURCE,
@@ -21,7 +22,8 @@ from app.ingestion.file_loaders import load_file
 from app.ingestion.web_loaders import load_web_page, load_wikipedia_page
 from app.ingestion.cleaning import clean_documents
 from app.ingestion.chunking import split_documents
-from app.knowledge.vector_store import source_exists
+from app.knowledge.vector_store import add_chunks, source_exists
+from app.ingestion.audio_transcription import AudioTranscriber
 
 
 logger = logging.getLogger(__name__)
@@ -87,17 +89,7 @@ def _ingest_documents(
     if not chunks:
         raise InvalidRequest("No chunks were generated from source")
 
-    vector_store = get_vector_store()
-
-    vector_store.add_documents(
-        documents=chunks,
-        ids=[
-            chunk.metadata[CHUNK_ID]
-            for chunk in chunks
-        ],
-    )
-
-    version = bump_corpus_version(redis_client)
+    added, version = add_chunks(chunks)
 
     cache_saved = ingestion_cache.set(
         cache_content,
@@ -115,7 +107,7 @@ def _ingest_documents(
         source=source,
         type=source_type,
         status="ingested",
-        chunks_added=len(chunks),
+        chunks_added=added,
         cache_synced=version is not None and cache_saved,
     )
 
@@ -146,6 +138,11 @@ def _check_existing_source(content: bytes,source_id: str,source: str,source_type
 
 
 
+@lru_cache(maxsize=1)
+def _audio_transcriber() -> AudioTranscriber:
+    return AudioTranscriber()
+
+
 def ingest_file(filename: str, data: bytes) -> IngestResult:
 
     source_type = validate_file(filename, data)
@@ -161,7 +158,10 @@ def ingest_file(filename: str, data: bytes) -> IngestResult:
     if existing:
         return existing
 
-    documents = load_file(filename, data)
+    if source_type is SourceType.AUDIO:
+        documents = _audio_transcriber().transcribe(filename, data)
+    else:
+        documents = load_file(filename, data, source_type)
 
     return _ingest_documents(
         documents=documents,

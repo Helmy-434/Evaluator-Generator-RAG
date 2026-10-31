@@ -7,7 +7,7 @@ from typing import Any
 from langchain_core.documents import Document
 
 from app.cache.redis_client import redis_client
-from app.contract import (
+from app.core.contract import (
     CHUNK_ID,
     LOCATION,
     SOURCE,

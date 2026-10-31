@@ -1,7 +1,7 @@
 import pytest
 from langchain_core.documents import Document
 
-from app.contract import (
+from app.core.contract import (
     CHUNK_ID,
     SOURCE_ID,
     SOURCE,
