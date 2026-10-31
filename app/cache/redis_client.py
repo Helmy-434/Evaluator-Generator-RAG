@@ -99,7 +99,7 @@ class RedisClient :
             return json.loads(data) 
         
         except json.JSONDecodeError :
-            logger.warning("Invalid JSON stored for key: %s", key)
+            log.warning("Invalid JSON stored for key: %s", key)
             return None
         
         
@@ -111,7 +111,7 @@ class RedisClient :
             return self.set(key, serialized, ttl)
 
         except (TypeError, ValueError):
-            logger.exception("JSON serialization failed for key: %s", key)
+            log.exception("JSON serialization failed for key: %s", key)
             return False
     
     
@@ -124,7 +124,7 @@ class RedisClient :
            return bool(self.re.ping()) 
        
        except redis.RedisError:
-           logger.exception("Redis health check failed")
+           log.exception("Redis health check failed")
            return False
        
        
@@ -134,7 +134,7 @@ class RedisClient :
             return bool(self.re.exists(key))
 
         except redis.RedisError:
-            logger.exception("Redis EXISTS failed")
+            log.exception("Redis EXISTS failed")
             return False
         
         
