@@ -39,7 +39,13 @@ def _run_chat(
     corpus_version: str,
     request_id: str,
 ) -> ChatResponse:
-    retriever, generator, evaluator = _components()
+    try:
+        retriever, generator, evaluator = _components()
+    except Exception as exc:
+        log.error("Chat components failed to initialise: %s", exc, exc_info=True)
+        raise ChatUnavailable(
+            "Chat models are not configured. Check the server log."
+        ) from exc
 
     try:
         retrieval = retriever.retrieve(body.question)

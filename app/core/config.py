@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import model_validator
+from pydantic import model_validator,AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # <root>/app/core/config.py -> parents[0]=core, parents[1]=app, parents[2]=<root>
@@ -16,6 +16,20 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",               # unknown keys in .env are not an error
     )
+
+    generator_api_key: str | None = None
+    generator_base_url: str = "https://api.groq.com/openai/v1"
+    generator_model: str = "llama-3.3-70b-versatile"
+    generator_timeout: int = 30
+
+    evaluator_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("EVALUATOR_API_KEY", "GEMINI_API_KEY"),
+    )
+    evaluator_model: str = "gemini-3.5-flash-lite"
+    evaluator_timeout: int = 30
+
+
 
     # --- Local embeddings ------------------------------------------------------
     embedding_model: str = "all-MiniLM-L6-v2"
