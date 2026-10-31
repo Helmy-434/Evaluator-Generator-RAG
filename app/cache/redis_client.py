@@ -71,7 +71,7 @@ class RedisClient :
 
 ## Version Number inside the key : Counter (corpus:version) -> represent the current state of knowledge base
 
-    def incre(self , key : str)-> int | None: 
+    def incr(self , key : str)-> int | None: 
         
         try : 
             
