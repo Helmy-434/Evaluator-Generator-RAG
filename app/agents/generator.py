@@ -6,7 +6,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from app.agents.prompts import GENERATOR_SYSTEM_PROMPT
+
 from app.contract import (
     GENERATOR_API_KEY,
     GENERATOR_BASE_URL,
@@ -17,6 +17,7 @@ from app.contract import (
     LOCATION,
     SourceRef,
 )
+from app.agents.prompts import GENERATOR_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,31 @@ class Generator:
             temperature=0.2,
         )
         self.output_parser = StrOutputParser()
+
+        # Fixed pre-compiled prompt templates (variables injected safely at invoke time)
+        self.initial_prompt = ChatPromptTemplate.from_messages([
+            ("system", GENERATOR_SYSTEM_PROMPT),
+            (
+                "user",
+                "<context>\n{context}\n</context>\n\n"
+                "Question: {question}",
+            ),
+        ])
+
+        self.refine_prompt = ChatPromptTemplate.from_messages([
+            ("system", GENERATOR_SYSTEM_PROMPT),
+            (
+                "user",
+                "<context>\n{context}\n</context>\n\n"
+                "Question: {question}\n\n"
+                "<previous_draft>\n{previous_draft}\n</previous_draft>\n\n"
+                "<evaluator_feedback>\n{evaluator_feedback}\n</evaluator_feedback>\n\n"
+                "Instruction: Refine the previous draft to address the evaluator's feedback while adhering strictly to the <context>.",
+            ),
+        ])
+
+        self.initial_chain = self.initial_prompt | self.llm | self.output_parser
+        self.refine_chain = self.refine_prompt | self.llm | self.output_parser
 
     def extract_sources(self, documents: list[Document]) -> list[SourceRef]:
         sources: list[SourceRef] = []
@@ -58,33 +84,6 @@ class Generator:
             blocks.append(f"{header}\n{doc.page_content.strip()}")
         return "\n\n".join(blocks)
 
-    def build_prompt_messages(
-        self,
-        question: str,
-        documents: list[Document],
-        evaluator_feedback: str | None = None,
-        previous_draft: str | None = None,
-    ) -> list[tuple[str, str]]:
-
-        context_str = self._build_context_str(documents)
-
-        user_content = (
-            f"<context>\n{context_str}\n</context>\n\n"
-            f"Question: {question}"
-        )
-
-        if evaluator_feedback and previous_draft:
-            user_content += (
-                f"\n\n<previous_draft>\n{previous_draft}\n</previous_draft>\n\n"
-                f"<evaluator_feedback>\n{evaluator_feedback}\n</evaluator_feedback>\n\n"
-                f"Instruction: Refine the previous draft to address the evaluator's feedback while adhering strictly to the <context>."
-            )
-
-        return [
-            ("system", GENERATOR_SYSTEM_PROMPT),
-            ("user", user_content),
-        ]
-
     def generate(
         self,
         question: str,
@@ -102,18 +101,21 @@ class Generator:
                 "sources": [],
             }
 
-        prompt_messages = self.build_prompt_messages(
-            question=question,
-            documents=documents,
-            evaluator_feedback=evaluator_feedback,
-            previous_draft=previous_draft,
-        )
-
-        prompt_template = ChatPromptTemplate.from_messages(prompt_messages)
-        chain = prompt_template | self.llm | self.output_parser
+        context_str = self._build_context_str(documents)
 
         try:
-            draft_answer = chain.invoke({})
+            if evaluator_feedback and previous_draft:
+                draft_answer = self.refine_chain.invoke({
+                    "context": context_str,
+                    "question": question,
+                    "previous_draft": previous_draft,
+                    "evaluator_feedback": evaluator_feedback,
+                })
+            else:
+                draft_answer = self.initial_chain.invoke({
+                    "context": context_str,
+                    "question": question,
+                })
         except Exception as exc:
             logger.error("LLM generation failed for question '%s': %s", question, exc, exc_info=True)
             return {
