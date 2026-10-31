@@ -4,7 +4,9 @@ import logging
 from typing import Any
 from langchain_openai import ChatOpenAI
 from langchain_core.documents import Document
-
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from app.agents.prompts import GENERATOR_SYSTEM_PROMPT
 from app.contract import (
     GENERATOR_API_KEY,
     GENERATOR_BASE_URL,
@@ -15,24 +17,23 @@ from app.contract import (
     LOCATION,
     SourceRef,
 )
-from app.agents.prompts import GENERATOR_SYSTEM_PROMPT
-from app.knowledge.retriever import Retriever
 
 logger = logging.getLogger(__name__)
 
 
 class Generator:
-    def __init__(self):
-        self.llm = ChatOpenAI(
+
+    def __init__(self, llm: ChatOpenAI | None = None):
+        self.llm = llm or ChatOpenAI(
             model=GENERATOR_MODEL,
             api_key=GENERATOR_API_KEY,
             base_url=GENERATOR_BASE_URL,
             request_timeout=GENERATOR_TIMEOUT,
             temperature=0.2,
         )
+        self.output_parser = StrOutputParser()
 
-    def add_metadata(self, documents: list[Document]) -> list[SourceRef]:
-        """Extracts SourceRef objects from document metadata."""
+    def extract_sources(self, documents: list[Document]) -> list[SourceRef]:
         sources: list[SourceRef] = []
         for doc in documents:
             meta = doc.metadata or {}
@@ -46,68 +47,86 @@ class Generator:
             )
         return sources
 
-    def create_full_prompt(
-        self,
-        user_input: str,
-        documents: list[Document],
-        evaluator_feedback: str | None = None,
-    ) -> list[dict[str, str]]:
-
-        context_blocks = []
+    def _build_context_str(self, documents: list[Document]) -> str:
+        """Formats documents with source metadata headers into an XML-safe context block."""
+        blocks = []
         for doc in documents:
             meta = doc.metadata or {}
-            source_name = meta.get(SOURCE, "unknown")
-            location = meta.get(LOCATION)
-            header = f"[Source: {source_name}" + (f", Location: {location}]" if location else "]")
-            context_blocks.append(f"{header}\n{doc.page_content.strip()}")
+            src = meta.get(SOURCE, "unknown")
+            loc = meta.get(LOCATION)
+            header = f"[Source: {src}" + (f", Location: {loc}]" if loc else "]")
+            blocks.append(f"{header}\n{doc.page_content.strip()}")
+        return "\n\n".join(blocks)
 
-        context = "\n\n".join(context_blocks)
+    def build_prompt_messages(
+        self,
+        question: str,
+        documents: list[Document],
+        evaluator_feedback: str | None = None,
+        previous_draft: str | None = None,
+    ) -> list[tuple[str, str]]:
 
-        messages = [
-            {"role": "system", "content": GENERATOR_SYSTEM_PROMPT},
-        ]
+        context_str = self._build_context_str(documents)
 
         user_content = (
-            f"Context:\n"
-            f'"""\n{context}\n"""\n\n'
-            f"Question:\n{user_input}"
+            f"<context>\n{context_str}\n</context>\n\n"
+            f"Question: {question}"
         )
 
-        if evaluator_feedback:
+        if evaluator_feedback and previous_draft:
             user_content += (
-                f"\n\nPrevious Evaluator Feedback:\n"
-                f'"""\n{evaluator_feedback}\n"""\n\n'
-                f"Please refine your answer to address the evaluator's feedback while adhering strictly to the context."
+                f"\n\n<previous_draft>\n{previous_draft}\n</previous_draft>\n\n"
+                f"<evaluator_feedback>\n{evaluator_feedback}\n</evaluator_feedback>\n\n"
+                f"Instruction: Refine the previous draft to address the evaluator's feedback while adhering strictly to the <context>."
             )
 
-        messages.append({"role": "user", "content": user_content})
-        return messages
+        return [
+            ("system", GENERATOR_SYSTEM_PROMPT),
+            ("user", user_content),
+        ]
 
     def generate(
-        self, prompt: str, evaluator_feedback: str | None = None
+        self,
+        question: str,
+        documents: list[Document],
+        evaluator_feedback: str | None = None,
+        previous_draft: str | None = None,
     ) -> dict[str, Any]:
+       
         
-        retriever = Retriever()
-        context = retriever.retrieve(prompt)
-
-        if not context["has_relevant"]:
-            logger.info("No relevant context found for the prompt.")
+        if not documents:
+            logger.info("No documents provided for question: %s", question)
             return {
                 "draft_answer": "I do not have sufficient information in the provided sources to answer this question.",
                 "insufficient_knowledge": True,
                 "sources": [],
             }
 
-        documents: list[Document] = context["documents"]
-        full_prompt = self.create_full_prompt(
-            user_input=prompt,
+        prompt_messages = self.build_prompt_messages(
+            question=question,
             documents=documents,
             evaluator_feedback=evaluator_feedback,
+            previous_draft=previous_draft,
         )
-        response = self.llm.invoke(full_prompt)
+
+        prompt_template = ChatPromptTemplate.from_messages(prompt_messages)
+        chain = prompt_template | self.llm | self.output_parser
+
+        try:
+            draft_answer = chain.invoke({})
+        except Exception as exc:
+            logger.error("LLM generation failed for question '%s': %s", question, exc, exc_info=True)
+            return {
+                "draft_answer": "An error occurred while generating the answer. Please try again later.",
+                "insufficient_knowledge": False,
+                "sources": self.extract_sources(documents),
+                "error": str(exc),
+            }
+
+        is_insufficient = "do not have sufficient information" in draft_answer.lower()
 
         return {
-            "draft_answer": response.content,
-            "insufficient_knowledge": False,
-            "sources": self._extract_sources(documents),
+            "draft_answer": draft_answer,
+            "insufficient_knowledge": is_insufficient,
+            "sources": self.extract_sources(documents),
         }
