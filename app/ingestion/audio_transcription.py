@@ -28,7 +28,7 @@ class AudioTranscriber:
         if not audio_data:
             raise InvalidRequest("Audio file is empty")
 
-        if len(audio_data) > settings.max_audio_bytes:
+        if len(audio_data) > settings.max_upload_bytes:
             raise FileTooLarge("Audio file exceeds the maximum allowed size")
 
         extension = Path(filename).suffix.lower()
