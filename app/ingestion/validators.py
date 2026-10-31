@@ -14,6 +14,8 @@ SUPPORTED_FILE_TYPES = {
     ".docx": SourceType.DOCX,
     ".txt": SourceType.TXT,
     ".pptx": SourceType.PPTX,
+    ".wav": SourceType.AUDIO,
+    ".mp3": SourceType.AUDIO,
 
     ".py": SourceType.CODE,
     ".js": SourceType.CODE,
@@ -40,9 +42,6 @@ def validate_file(filename: str, data: bytes) -> SourceType:
     if not data:
         raise InvalidRequest("File is empty")
 
-    if len(data) > settings.max_upload_bytes:
-        raise FileTooLarge("File exceeds maximum upload size")
-
     extension = Path(filename).suffix.lower()
 
     source_type = SUPPORTED_FILE_TYPES.get(extension)
@@ -53,6 +52,14 @@ def validate_file(filename: str, data: bytes) -> SourceType:
             f"Unsupported file extension: {extension}. "
             f"Supported extensions: {supported}"
         )
+
+    max_bytes = (
+        settings.max_audio_bytes
+        if source_type is SourceType.AUDIO
+        else settings.max_upload_bytes
+    )
+    if len(data) > max_bytes:
+        raise FileTooLarge("File exceeds maximum allowed size")
 
     return source_type
 
