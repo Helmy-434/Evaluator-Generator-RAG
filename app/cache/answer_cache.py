@@ -12,10 +12,10 @@ from app.core.contract import (
     NS_ANSWER,
     get_corpus_version,
 )
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-ANSWER_TTL = 3600
 ANSWER_CACHE_PROMPT_VERSION = "v1"
 
 
@@ -62,7 +62,7 @@ def cache_answer(
 
     key = _answer_key(question, corpus_version)
     try:
-        ok = redis_client.set_json(key, response, ttl=ANSWER_TTL)
+        ok = redis_client.set_json(key, response, ttl=settings.answer_cache_ttl)
     except Exception:
         logger.warning("Failed to write answer cache", exc_info=True)
         return False

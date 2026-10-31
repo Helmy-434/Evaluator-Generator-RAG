@@ -169,7 +169,6 @@ Evaluator-Generator-RAG/
 │   │   └── evaluator_memory.py
 │   │
 │   └── workflow/
-│       ├── state.py
 │       └── evaluator_generator.py
 │
 ├── frontend/
@@ -180,18 +179,19 @@ Evaluator-Generator-RAG/
 │   ├── test_chunking.py
 │   ├── test_web_loaders.py
 │   ├── test_pipeline.py
-│   ├── test_retrieval.py
-│   ├── test_agents.py
-│   ├── test_workflow.py
-│   ├── test_memory_isolation.py
-│   ├── test_cache.py
-│   └── test_api.py
+│   ├── test_file_loaders.py
+│   ├── test_agents_offlline.py
+│   ├── test_loop.py
+│   ├── test_memory.py
+│   ├── test_answer_cache.py
+│   ├── test_chat_api.py
+│   ├── test_sources_api.py
+│   └── test_priority_fixes.py
 │
 ├── data/
 │
-├── .env.example
 ├── .gitignore
-├── docker-compose.yml
+├── docker-compose.yaml
 ├── requirements.txt
 └── README.md
 ```
@@ -460,10 +460,12 @@ It provides the generator with:
 The generator receives:
 - User question.
 - Retrieved context.
-- Relevant conversation memory.
 - Previous evaluation feedback, when applicable.
 
 It generates an answer grounded in the retrieved information.
+
+Generator and evaluator events are recorded in separate Redis histories for
+observability. They are not currently read back into prompts.
 
 #### Evaluator Agent
 
@@ -506,7 +508,7 @@ Part A is responsible for the knowledge-management side of the system.
 - Chroma vector-store write operations.
 - Source listing and deletion.
 - Redis client and ingestion cache.
-- Shared logging and application infrastructure.
+- Application logging and shared infrastructure.
 - Source management API.
 - Frontend integration.
 
@@ -552,10 +554,9 @@ Part B is responsible for the question-answering and evaluation side.
 | `generator.py` | Generate answers from retrieved context |
 | `evaluator.py` | Evaluate generated answers |
 | `prompts.py` | Store agent instructions and prompts |
-| `generator_memory.py` | Maintain generator conversation context |
-| `evaluator_memory.py` | Maintain evaluator conversation context |
+| `generator_memory.py` | Store generator iteration history |
+| `evaluator_memory.py` | Store evaluator iteration history |
 | `answer_cache.py` | Cache generated and evaluated responses |
-| `state.py` | Define workflow state |
 | `evaluator_generator.py` | Coordinate the generation and evaluation loop |
 | `chat.py` | Expose the chat API |
 
@@ -698,7 +699,9 @@ However, cache synchronization failures should be logged and reported through th
 | LangChain Core | Document objects and shared interfaces |
 | LangChain Text Splitters | Document chunking |
 | Chroma | Vector database |
-| OpenAI Embeddings | Text embedding generation |
+| Hugging Face Sentence Transformers | Local `all-MiniLM-L6-v2` text embeddings |
+| Groq | Generator LLM provider through the OpenAI-compatible API |
+| Google Gemini | Evaluator LLM provider |
 | Redis | Caching and corpus versioning |
 | Faster-Whisper | Audio transcription |
 | Pytest | Automated testing |
@@ -738,10 +741,10 @@ pip install -r requirements.txt
 
 ### 4. Configure Environment Variables
 
-Copy the example configuration:
+Create a `.env` file in the project root:
 
 ```bash
-cp .env.example .env
+copy .env.example .env
 ```
 
 Update `.env` with your API keys and application configuration.
@@ -787,14 +790,23 @@ APP_VERSION=1.0.0
 DEBUG=true
 
 # LLM
-LLM_MODEL=
-TEMPERATURE=0
+# Generator
+GENERATOR_API_KEY=
+GENERATOR_BASE_URL=https://api.groq.com/openai/v1
+GENERATOR_MODEL=llama-3.3-70b-versatile
+GENERATOR_TIMEOUT=30
+
+# Evaluator
+EVALUATOR_API_KEY=
+EVALUATOR_MODEL=gemini-3.5-flash-lite
+EVALUATOR_TIMEOUT=30
 
 # Embeddings
 EMBEDDING_MODEL=all-MiniLM-L6-v2
 
 # Vector Database
-VECTOR_PATH=./data/chroma
+VECTOR_DIR=./data/vectorstore
+REGISTRY_DB=./data/sources.db
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
@@ -845,39 +857,31 @@ http://127.0.0.1:8000/redoc
 
 ### Start the Frontend
 
+For local development without Docker:
 
 ```bash
-python -m http.server 5173 --directory frontend```
+python -m http.server 5173 --directory frontend
 ```
 
 ## Testing
 
 The project uses `pytest` for automated testing.
 
-Tests should cover individual modules as well as integration between the main application components.
+Tests cover individual modules and integration between the main application components.
 
 ### Run All Tests
 
 From the project root:
 
 ```bash
-python -m pytest tests/ -v
+python -m pytest -q
 ```
 
 ### Run Individual Test Modules
 
 ```bash
-python -m pytest tests/test_validators.py -v
-python -m pytest tests/test_cleaning.py -v
-python -m pytest tests/test_chunking.py -v
-python -m pytest tests/test_web_loaders.py -v
-python -m pytest tests/test_pipeline.py -v
-python -m pytest tests/test_retrieval.py -v
-python -m pytest tests/test_agents.py -v
-python -m pytest tests/test_workflow.py -v
-python -m pytest tests/test_memory_isolation.py -v
-python -m pytest tests/test_cache.py -v
-python -m pytest tests/test_api.py -v
+python -m pytest tests/test_loop.py -v
+python -m pytest tests/test_chat_api.py -v
 ```
 
 ### Test Coverage
@@ -889,12 +893,13 @@ python -m pytest tests/test_api.py -v
 | `test_chunking.py` | Chunk generation, metadata, size, and overlap |
 | `test_web_loaders.py` | Web and Wikipedia loading |
 | `test_pipeline.py` | Ingestion orchestration and cache interaction |
-| `test_retrieval.py` | Retrieval behavior |
-| `test_agents.py` | Generator and evaluator behavior |
-| `test_workflow.py` | End-to-end workflow logic |
-| `test_memory_isolation.py` | Generator/evaluator memory separation |
-| `test_cache.py` | Redis and answer-cache behavior |
-| `test_api.py` | API endpoint behavior |
+| `test_agents_offlline.py` | Generator and evaluator behavior |
+| `test_loop.py` | End-to-end workflow logic |
+| `test_memory.py` | Generator/evaluator memory separation |
+| `test_answer_cache.py` | Redis and answer-cache behavior |
+| `test_chat_api.py` | Chat endpoint behavior |
+| `test_sources_api.py` | Source endpoint behavior |
+| `test_priority_fixes.py` | Regression coverage for priority fixes |
 
 ### Test Samples
 

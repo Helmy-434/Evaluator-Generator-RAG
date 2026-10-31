@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from langchain_core.documents import Document
-from langchain_core.runnables import RunnableLambda
 
 from app.agents.citations import renumber_citations
 from app.agents.evaluator import Evaluator, EvaluationError, EvaluationOutputError
@@ -15,7 +14,7 @@ from app.agents.prompts import REFUSAL_SENTENCE
 
 logger = logging.getLogger(__name__)
 
-# Counts the FIRST generation as iteration 1 (confirm with the instructor).
+# Counts the first generation as iteration 1.
 MAX_ITERATIONS = 4
 FALLBACK_FEEDBACK = ("Remove every statement not directly supported by the context "
                      "and keep [Passage N] citations accurate.")
@@ -132,9 +131,3 @@ def run_loop(
     text, sources = _finalize(draft, documents, generator)
     return LoopResult(text, False, max_iterations, draft["insufficient_knowledge"], sources,
                       feedback, note="Maximum iterations reached; answer not fully validated.")
-
-
-def build_chain(generator: Generator, evaluator: Evaluator, on_event: EventHook | None = None):
-    """LCEL entry point: input {'question', 'documents'} -> LoopResult."""
-    return RunnableLambda(lambda x: run_loop(
-        x["question"], x["documents"], generator, evaluator, on_event=on_event))
