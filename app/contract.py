@@ -4,12 +4,16 @@ from functools import lru_cache
 
 import logging
 from enum import Enum
-
+import os
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
 
-from app.core.config import settings
+from app.core.config import settings, ROOT_DIR
 
 log = logging.getLogger(__name__)
+
+# Ensure .env variables are loaded into os.environ
+load_dotenv(ROOT_DIR / ".env")
 
 # =============================================================================
 # 1. CHUNK FORMAT: every chunk is a langchain Document with these metadata keys
@@ -39,7 +43,18 @@ def location_or_none(metadata: dict) -> str | None:
 EMBEDDING_MODEL = settings.embedding_model
 VECTOR_DIR = str(settings.vector_path)        # absolute path, same folder from any working dir
 COLLECTION = "knowledge"
-REDIS_URL = settings.redis_url
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# Generator settings (Groq Llama 3.3 70B)
+GENERATOR_API_KEY = os.getenv("GENERATOR_API_KEY")
+GENERATOR_BASE_URL = os.getenv("GENERATOR_BASE_URL", "https://api.groq.com/openai/v1")
+GENERATOR_MODEL = os.getenv("GENERATOR_MODEL", "llama-3.3-70b-versatile")
+GENERATOR_TIMEOUT = int(os.getenv("GENERATOR_TIMEOUT", "30"))  
+
+# Evaluator settings (Google Gemini - e.g. gemini-2.5-flash / gemini-1.5-pro)
+EVALUATOR_API_KEY = os.getenv("EVALUATOR_API_KEY") or os.getenv("GEMINI_API_KEY")
+EVALUATOR_MODEL = os.getenv("EVALUATOR_MODEL", "gemini-3.5-flash-lite")
+EVALUATOR_TIMEOUT = int(os.getenv("EVALUATOR_TIMEOUT", "30"))
 
 def get_embeddings():
     from langchain_openai import OpenAIEmbeddings   # change provider HERE only
@@ -51,17 +66,16 @@ def get_embeddings():
 def get_vector_store():
     """Ingestion calls .add_documents()/.delete(); chat calls .as_retriever()/similarity search."""
     from langchain_chroma import Chroma
-    return Chroma(collection_name=COLLECTION, embedding_function=get_embeddings(),
-                  persist_directory=VECTOR_DIR)
+    return Chroma(
+        collection_name=COLLECTION,
+        embedding_function=get_embeddings(),
+        persist_directory=VECTOR_DIR,
+    )
 
 # =============================================================================
 # 3. CORPUS VERSION: how chat knows its cached answers are stale
 #    Ingestion calls bump_corpus_version() after EVERY add or delete.
 #    Chat includes get_corpus_version() in every answer-cache key.
-#
-#    bump_corpus_version returns None when Redis is unavailable (the safe client
-#    returns None from incr). Ingestion must then set IngestResult.cache_synced
-#    = False so the failure is visible instead of silently serving stale answers.
 # =============================================================================
 CORPUS_VERSION_KEY = "corpus:version"
 
@@ -73,26 +87,15 @@ def bump_corpus_version(redis_client) -> str | None:
     return str(value)
 
 def get_corpus_version(redis_client) -> str:
-    return redis_client.get(CORPUS_VERSION_KEY) or "0"   # chat must treat Redis errors as "0"/no cache
+    return redis_client.get(CORPUS_VERSION_KEY) or "0"
 
 # =============================================================================
 # 4. REDIS KEY NAMESPACES (so nothing collides)
-#    ingest:*  -> ingestion (doc hashes, embedding cache)
-#    answer:*  -> chat (final answers, evaluations)
-#    gen:*     -> Generator memory      (never touched by evaluator code)
-#    eval:*    -> Evaluator memory      (never touched by generator code)
 # =============================================================================
 NS_INGEST, NS_ANSWER, NS_GEN_MEMORY, NS_EVAL_MEMORY = "ingest", "answer", "gen", "eval"
 
 # =============================================================================
-# 5. HTTP API between frontend and backend
-#    POST   /api/sources/files        multipart "file"        -> IngestResult
-#    POST   /api/sources/url          {url}                   -> IngestResult
-#    POST   /api/sources/wikipedia    {page, lang="en"}       -> IngestResult
-#    GET    /api/sources                                      -> SourceListResponse
-#    DELETE /api/sources/{source_id}                          -> SourceListResponse
-#    POST   /api/chat                 ChatRequest             -> ChatResponse
-#    Errors: HTTP 4xx/5xx with ErrorResponse body.
+# 5. HTTP API schemas
 # =============================================================================
 class IngestUrlRequest(BaseModel):
     url: str
@@ -104,12 +107,11 @@ class IngestWikipediaRequest(BaseModel):
 class IngestResult(BaseModel):
     source_id: str
     source: str
-    type: SourceType | None = None  # None when a failed upload has no recognizable type
+    type: SourceType | None = None
     status: str                    # "ingested" | "already_exists" | "failed"
     chunks_added: int = 0
     message: str | None = None     # reason when failed / skipped
-    cache_synced: bool = True      # False => ingestion succeeded but bump_corpus_version failed
-                                   #          (redis down), so cached answers may be stale
+    cache_synced: bool = True
 
 class SourceInfo(BaseModel):
     source_id: str
@@ -132,13 +134,13 @@ class SourceRef(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    validated: bool                # False => loop hit the cap of 4 without approval
-    iterations_used: int           # 0 = served from cache or "not in sources" short-circuit
+    validated: bool
+    iterations_used: int
     insufficient_knowledge: bool = False
     sources: list[SourceRef] = []
     evaluator_feedback: str | None = None
     cache_hit: bool = False
 
 class ErrorResponse(BaseModel):
-    error: str                     # e.g. "unsupported_file_type", "no_knowledge_loaded"
+    error: str
     detail: str
