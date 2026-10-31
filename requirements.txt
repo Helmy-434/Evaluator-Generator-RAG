@@ -17,6 +17,7 @@ langchain-chroma
 
 # LLM
 openai
+langchain-google-genai
 
 # Vector database
 chromadb

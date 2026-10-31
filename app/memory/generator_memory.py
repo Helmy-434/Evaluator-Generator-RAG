@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.cache.answer_cache import cache_answer, get_cached_answer
 from app.cache.redis_client import redis_client
 from app.contract import NS_GEN_MEMORY
 

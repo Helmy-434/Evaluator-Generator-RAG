@@ -90,6 +90,8 @@ class Generator:
             )
         return sources
 
+    _build_sources = build_sources
+
     def generate(
         self,
         question: str,
