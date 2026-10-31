@@ -1,4 +1,3 @@
-
 from langchain_community.document_loaders import WebBaseLoader ,WikipediaLoader
 
 from langchain_core.documents import Document
@@ -13,11 +12,7 @@ from app.ingestion.validators import validate_url
 from app.core.errors import InvalidRequest
 
 
-def _set_metadata(
-    documents: list[Document],
-    source: str,
-    source_type: SourceType,
-) -> list[Document]:
+def _set_metadata(documents: list[Document], source: str, source_type: SourceType) -> list[Document]:
 
     for document in documents:
         document.metadata[SOURCE] = source
@@ -68,10 +63,7 @@ def load_web_page(url: str) -> list[Document]:
 
 
 
-def load_wikipedia_page(
-    page: str,
-    lang: str = "en",
-) -> list[Document]:
+def load_wikipedia_page(page: str, lang: str = "en") -> list[Document]:
 
     if not page or not page.strip():
         raise InvalidRequest("Wikipedia page title is required")
