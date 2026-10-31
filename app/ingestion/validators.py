@@ -10,6 +10,21 @@ SUPPORTED_FILE_TYPES = {
     ".docx": SourceType.DOCX,
     ".txt": SourceType.TXT,
     ".pptx": SourceType.PPTX,
+
+    ".py": SourceType.CODE,
+    ".js": SourceType.CODE,
+    ".ts": SourceType.CODE,
+    ".java": SourceType.CODE,
+    ".cpp": SourceType.CODE,
+    ".c": SourceType.CODE,
+    ".h": SourceType.CODE,
+    ".html": SourceType.CODE,
+    ".css": SourceType.CODE,
+    ".sql": SourceType.CODE,
+    ".json": SourceType.CODE,
+    ".yaml": SourceType.CODE,
+    ".yml": SourceType.CODE,
+    ".sh": SourceType.CODE,
 }
 
 
