@@ -77,14 +77,13 @@ def test_transcribe_invalid_input(transcriber, filename, audio_data):
 
 
 def test_transcribe_file_too_large(transcriber, monkeypatch):
-    monkeypatch.setattr(settings, "max_audio_bytes", 5)
+    monkeypatch.setattr(settings, "max_audio_mb", 1)
 
     with pytest.raises(FileTooLarge):
         transcriber.transcribe(
             filename="lecture.wav",
-            audio_data=b"x" * 6,
+            audio_data=b"x" * (1024 * 1024 + 1),
         )
-
 
 def test_transcribe_empty_segments(monkeypatch):
     class MockWhisperModel:
