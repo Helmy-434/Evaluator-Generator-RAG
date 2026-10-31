@@ -71,7 +71,7 @@ class Generator:
         self.initial_chain = self.initial_prompt | self.llm | self.output_parser
         self.refine_chain = self.refine_prompt | self.llm | self.output_parser
 
-    def _build_sources(self, indices: list[int], documents: list[Document]) -> list[SourceRef]:
+    def build_sources(self, indices: list[int], documents: list[Document]) -> list[SourceRef]:
         sources: list[SourceRef] = []
         for i in indices:
             doc = documents[i - 1]
@@ -138,6 +138,6 @@ class Generator:
         return {
             "draft_answer": draft_answer,
             "insufficient_knowledge": is_insufficient,
-            "sources": self._build_sources(indices, documents),
+            "sources": self.build_sources(indices, documents),
             "cited_indices": indices,  # raw numbering, used later by renumber_citations
         }
