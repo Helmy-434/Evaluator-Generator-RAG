@@ -846,17 +846,10 @@ http://127.0.0.1:8000/redoc
 
 ### Start the Frontend
 
-Use the frontend's configured development command.
-
-For example, if it is a Vite application:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+python -m http.server 5173 --directory frontend```
 ```
-
----
 
 ## Testing
 

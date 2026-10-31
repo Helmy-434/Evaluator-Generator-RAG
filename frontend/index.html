@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evaluator–Generator RAG</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    // Apply the saved theme before first paint (avoids a light/dark flash).
+    try {
+      var t = localStorage.getItem("theme");
+      if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = t;
+    } catch (e) { document.documentElement.dataset.theme = "light"; }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <button id="btn-sidebar" class="icon-btn mobile-only" aria-label="Open knowledge base" title="Knowledge base">☰</button>
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">◆</span>
+      <span class="brand-name">Evaluator–Generator <span class="brand-sub">RAG</span></span>
+    </div>
+    <span id="mock-ribbon" class="badge warning" hidden>Mock mode</span>
+    <div class="topbar-spacer"></div>
+    <span id="cache-badge" class="badge neutral" hidden title="Redis is unreachable. Everything still works, just slower.">Cache offline</span>
+    <div class="status" title="Backend status">
+      <span id="health-dot" class="dot"></span>
+      <span id="health-text" class="status-text">Checking…</span>
+    </div>
+    <button id="btn-how" class="btn ghost small">How it works</button>
+    <button id="btn-new-chat" class="btn ghost small">New chat</button>
+    <button id="btn-theme" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">◐</button>
+  </header>
+
+  <div id="backdrop" class="backdrop" hidden></div>
+
+  <aside id="sidebar" class="sidebar" aria-label="Knowledge base">
+    <div class="sidebar-head">
+      <h2>Knowledge base</h2>
+      <button id="btn-close-sidebar" class="icon-btn mobile-only" aria-label="Close">✕</button>
+    </div>
+
+    <section class="card">
+      <h3>Upload files</h3>
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload files: drop them here or press Enter to browse">
+        <div class="dropzone-icon" aria-hidden="true">⇪</div>
+        <p><strong>Drop files here</strong> or <span class="link-like">browse</span></p>
+        <small id="accept-hint"></small>
+        <input id="file-input" type="file" multiple hidden>
+      </div>
+      <ul id="upload-queue" class="queue" aria-live="polite"></ul>
+      <button id="btn-clear-finished" class="btn ghost small" hidden>Clear finished</button>
+    </section>
+
+    <section class="card">
+      <h3>Web page</h3>
+      <form id="url-form" class="inline-form" novalidate>
+        <label class="sr-only" for="url-input">Web page URL</label>
+        <input id="url-input" type="url" placeholder="https://example.com/article" autocomplete="off">
+        <button type="submit" class="btn primary">Add</button>
+      </form>
+      <p id="url-error" class="field-error" hidden></p>
+    </section>
+
+    <section class="card">
+      <h3>Wikipedia</h3>
+      <form id="wiki-form" class="inline-form wiki" novalidate>
+        <label class="sr-only" for="wiki-input">Wikipedia page title or URL</label>
+        <input id="wiki-input" type="text" placeholder="Page title or URL" autocomplete="off">
+        <label class="sr-only" for="wiki-lang">Language</label>
+        <select id="wiki-lang"></select>
+        <button type="submit" class="btn primary">Add</button>
+      </form>
+      <p id="wiki-error" class="field-error" hidden></p>
+    </section>
+
+    <section class="sources">
+      <div class="sources-head">
+        <h3>Sources <span id="source-count" class="muted"></span></h3>
+        <button id="btn-refresh" class="icon-btn small" aria-label="Refresh sources" title="Refresh">↻</button>
+      </div>
+      <ul id="source-list" class="source-list"></ul>
+    </section>
+  </aside>
+
+  <main class="chat" aria-label="Chat">
+    <div id="messages" class="messages" aria-live="polite"></div>
+    <form id="composer" class="composer" autocomplete="off">
+      <div class="composer-box">
+        <label class="sr-only" for="question">Your question</label>
+        <textarea id="question" rows="1" maxlength="4000" placeholder="Ask a question about your sources…"></textarea>
+        <button id="btn-send" type="submit" class="btn primary">Send</button>
+      </div>
+      <div class="composer-meta">
+        <span id="composer-hint" class="muted"></span>
+        <span id="char-count" class="muted"></span>
+      </div>
+    </form>
+  </main>
+
+  <dialog id="confirm-dialog">
+    <form method="dialog">
+      <h3>Delete this source?</h3>
+      <p id="confirm-text"></p>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="confirm" class="btn danger">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="how-dialog">
+    <form method="dialog">
+      <h3>How it works</h3>
+      <ol class="how-steps">
+        <li><strong>Generator</strong> answers your question using only the sources you added.</li>
+        <li><strong>Evaluator</strong> checks the answer for accuracy, relevance, completeness and grounding.</li>
+        <li>If it is rejected, the feedback goes back to the Generator for a better answer, for up to <strong>4 rounds</strong>.</li>
+        <li>If the question cannot be answered from your sources, you are told so instead of getting a guess.</li>
+      </ol>
+      <div class="dialog-actions"><button value="close" class="btn primary">Got it</button></div>
+    </form>
+  </dialog>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
